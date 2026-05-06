@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポイ活・マイル計算 シミュレータ</title>
+    <meta name="description" content="所持カードの登録、店舗別の還元率シミュレーション、お小遣い帳機能を持つ統合ポイ活ツールです。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <button class="nav-btn active" data-target="view-setup">
+            <span>💳</span> 所持カード
+        </button>
+        <button class="nav-btn" data-target="view-simulator">
+            <span>🧮</span> 計算
+        </button>
+        <button class="nav-btn" data-target="view-tracker">
+            <span>📓</span> 履歴
+        </button>
+    </nav>
+
+    <main class="container">
+        <header class="header">
+            <h1>Point Simulator</h1>
+            <p id="header-desc">まずは、お持ちのカードを登録してください。</p>
+        </header>
+
+        <!-- View 1: Card Setup -->
+        <section id="view-setup" class="view-section active">
+            <div class="glass-panel">
+                <h2 class="section-title">所持カードの登録</h2>
+                <div id="card-checklist" class="card-checklist">
+                    <!-- Javascriptで動的に生成 -->
+                </div>
+                <button id="save-cards-btn" class="submit-btn mt-4">保存してシミュレータへ</button>
+                <button id="reset-data-btn" class="record-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.1); margin-top:1rem;">アプリのデータをすべてリセット</button>
+            </div>
+        </section>
+
+        <!-- View 2: Simulator -->
+        <section id="view-simulator" class="view-section hidden">
+            <div class="calculator-card glass-panel">
+                <form id="calc-form">
+                    <div class="input-group">
+                        <label for="shop-search">利用店舗</label>
+                        <div class="autocomplete-wrapper" style="position: relative;">
+                            <input type="text" id="shop-search" name="shop-search" placeholder="お店の名前を検索（例: セブン）" autocomplete="off" required>
+                            <div id="shop-suggestions" class="suggestions-list hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="amount">1回の決済金額 (円)</label>
+                        <input type="number" id="amount" name="amount" min="1" placeholder="例: 500" required>
+                    </div>
+
+                    <button type="submit" class="submit-btn">一番お得な支払い方法を計算</button>
+                </form>
+            </div>
+
+            <section id="results-section" class="results-section hidden">
+                <h2 class="section-title">あなたの最適解</h2>
+                <div id="owned-ranking" class="ranking-list">
+                    <!-- 所持カードのランキング -->
+                </div>
+                
+                <div id="suggest-section" class="suggest-section hidden mt-4">
+                    <h3 class="suggest-title">💡 もし持っていれば、もっとお得なカード</h3>
+                    <div id="unowned-ranking" class="ranking-list opacity-80">
+                        <!-- 未所持のより良いカード -->
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <!-- View 3: Tracker (お小遣い帳) -->
+        <section id="view-tracker" class="view-section hidden">
+            <div class="tracker-summary glass-panel mb-4">
+                <div class="summary-item">
+                    <span class="summary-label">表示月の支出</span>
+                    <span id="total-expense" class="summary-value">¥0</span>
+                </div>
+            </div>
+
+            <div class="asset-dashboard glass-panel mb-4">
+                <div style="text-align:center; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px dashed var(--glass-border);">
+                    <div style="font-size:0.9rem; color:#94a3b8; margin-bottom:0.5rem;">現在の総マイル換算力</div>
+                    <div style="display:flex; justify-content:center; gap:2rem;">
+                        <div>
+                            <div style="font-size:0.8rem; color:#60a5fa; font-weight:bold;">✈️ ANAマイル換算</div>
+                            <div id="total-ana-miles" style="font-size:1.8rem; font-weight:800; color:#f8fafc;">0</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.8rem; color:#f87171; font-weight:bold;">✈️ JALマイル換算</div>
+                            <div id="total-jal-miles" style="font-size:1.8rem; font-weight:800; color:#f8fafc;">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mile-goal-section" style="margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:1px dashed var(--glass-border);">
+                    <div style="font-size:0.9rem; color:#94a3b8; margin-bottom:0.8rem; text-align:center;">🎯 目標設定（エコノミー往復目安）</div>
+                    <div style="display:flex; gap:0.5rem; justify-content:center; margin-bottom:1rem;">
+                        <select id="goal-airline" style="padding:0.4rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white; outline:none;">
+                            <option value="ana">ANA</option>
+                            <option value="jal">JAL</option>
+                        </select>
+                        <select id="goal-destination" style="padding:0.4rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white; outline:none;">
+                            <option value="none">目標を設定しない</option>
+                            <option value="okinawa">沖縄 (約18,000マイル)</option>
+                            <option value="seoul">ソウル (約15,000マイル)</option>
+                            <option value="hawaii">ハワイ (約40,000マイル)</option>
+                            <option value="ny">ニューヨーク (約50,000マイル)</option>
+                            <option value="paris">パリ (約55,000マイル)</option>
+                        </select>
+                    </div>
+                    <div id="goal-progress-container" class="hidden">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.4rem;">
+                            <span id="goal-text" style="color:#cbd5e1;"></span>
+                            <span id="goal-remaining" style="color:#f8fafc; font-weight:bold;"></span>
+                        </div>
+                        <div style="width:100%; background:rgba(255,255,255,0.1); border-radius:10px; height:12px; overflow:hidden;">
+                            <div id="goal-progress-bar" style="height:100%; background:linear-gradient(90deg, #38bdf8, #818cf8); width:0%; transition:width 0.5s;"></div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <h3 style="margin-top:0; margin-bottom:1rem; font-size:1rem; color:#cbd5e1;">ポイント種類別 内訳</h3>
+                <div id="asset-list" class="asset-list">
+                    <!-- Javascriptで生成 -->
+                </div>
+            </div>
+            
+            <div class="calendar-container glass-panel mb-4">
+                <div class="calendar-header">
+                    <button id="prev-month" class="cal-nav-btn">&lt;</button>
+                    <h3 id="calendar-month-year"></h3>
+                    <button id="next-month" class="cal-nav-btn">&gt;</button>
+                </div>
+                <div class="calendar-grid" id="calendar-grid" style="margin-bottom:1.5rem;">
+                    <!-- Javascriptで生成 -->
+                </div>
+                <button id="open-manual-record-btn" class="submit-btn" style="padding: 0.8rem; font-size: 1rem; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; box-shadow: none;">＋ 支出を直接記録する</button>
+            </div>
+
+            <h2 class="section-title" id="selected-date-title">すべての履歴</h2>
+            <div id="tracker-list" class="tracker-list">
+                <!-- Javascriptで動的に生成 -->
+                <div class="empty-state">まだ記録がありません。</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Memo Modal -->
+    <div id="memo-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <h3>記録の追加</h3>
+            <p id="modal-summary" class="modal-summary"></p>
+            <div class="input-group">
+                <label for="record-category">カテゴリー</label>
+                <select id="record-category">
+                    <option value="食費">食費</option>
+                    <option value="日用品">日用品</option>
+                    <option value="交通費">交通費</option>
+                    <option value="交際費">交際費</option>
+                    <option value="趣味・娯楽">趣味・娯楽</option>
+                    <option value="その他" selected>その他</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="memo-input">詳細メモ (任意)</label>
+                <input type="text" id="memo-input" placeholder="例: 友達とランチ">
+            </div>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="record-btn" style="margin-top:0;">キャンセル</button>
+                <button id="modal-save-btn" class="submit-btn" style="flex:1;">記録する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Record Modal -->
+    <div id="manual-record-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <h3>支出の直接入力</h3>
+            <div class="input-group" style="margin-top:1rem;">
+                <label for="manual-date">日付</label>
+                <input type="date" id="manual-date" required>
+            </div>
+            <div class="input-group">
+                <label for="manual-amount">金額 (円)</label>
+                <input type="number" id="manual-amount" min="1" placeholder="例: 1000" required>
+            </div>
+            <div class="input-group">
+                <label for="manual-card">使用したカード・電子マネー</label>
+                <select id="manual-card">
+                    <!-- Javascriptで動的に生成 -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="manual-category">カテゴリー</label>
+                <select id="manual-category">
+                    <option value="食費">食費</option>
+                    <option value="日用品">日用品</option>
+                    <option value="交通費">交通費</option>
+                    <option value="交際費">交際費</option>
+                    <option value="趣味・娯楽">趣味・娯楽</option>
+                    <option value="その他" selected>その他</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="manual-memo">メモ (任意)</label>
+                <input type="text" id="manual-memo" placeholder="店名や内容など">
+            </div>
+            <div class="modal-actions">
+                <button id="manual-cancel-btn" class="record-btn" style="margin-top:0;">キャンセル</button>
+                <button id="manual-save-btn" class="submit-btn" style="flex:1;">保存する</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
