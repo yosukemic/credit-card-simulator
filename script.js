@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function calculatePoints(card, amount, shop) {
+    function calculatePoints(card, amount, shop, pointCardVal = 'none') {
         const ownedObj = ownedCards.find(c => c.id === card.id);
         
         // Clone card to not mutate original
@@ -616,8 +616,26 @@ document.addEventListener('DOMContentLoaded', () => {
             totalPoints = Math.floor(amount / c.unitAmount) * c.unitPoints;
         }
         
-        let anaMiles = totalPoints * c.anaRate;
-        let jalMiles = totalPoints * c.jalRate;
+        // 提示ポイントの計算
+        let presentPoints = 0;
+        let presentMiles = 0;
+        let presentName = '';
+        
+        if (pointCardVal !== 'none') {
+            const [ptType, ptRateStr] = pointCardVal.split('_');
+            const ptRate = ptRateStr === '10' ? 1.0 : 0.5;
+            presentPoints = Math.floor(amount * (ptRate / 100));
+            // 提示ポイントはマイル換算レート一律0.5とする
+            presentMiles = presentPoints * 0.5;
+            
+            if (ptType === 'vpoint') presentName = 'Vポイント';
+            else if (ptType === 'dpoint') presentName = 'dポイント';
+            else if (ptType === 'ponta') presentName = 'Pontaポイント';
+            else if (ptType === 'rakuten') presentName = '楽天ポイント';
+        }
+        
+        let anaMiles = totalPoints * c.anaRate + presentMiles;
+        let jalMiles = totalPoints * c.jalRate + presentMiles;
         let bestMiles = Math.max(anaMiles, jalMiles);
         
         const effectiveRate = amount > 0 ? (bestMiles / amount) * 100 : 0;
@@ -628,7 +646,9 @@ document.addEventListener('DOMContentLoaded', () => {
             anaMiles: anaMiles, 
             jalMiles: jalMiles, 
             totalValue: bestMiles,
-            effectiveRate: effectiveRate 
+            effectiveRate: effectiveRate,
+            presentPoints: presentPoints,
+            presentName: presentName
         };
     }
 
@@ -636,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const amount = parseInt(amountInput.value) || 0;
         const shopSearchVal = document.getElementById('shop-search').value.trim();
+        const pointCardVal = document.getElementById('point-card').value;
         
         let shop = selectedShop;
         if (!shop) {
@@ -648,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (amount <= 0 || !shop) return;
 
-        let allResults = baseCardPresets.map(c => calculatePoints(c, amount, shop));
+        let allResults = baseCardPresets.map(c => calculatePoints(c, amount, shop, pointCardVal));
         allResults.sort((a, b) => b.totalValue - a.totalValue);
 
         const ownedResults = allResults.filter(r => ownedCards.some(c => c.id === r.id));
@@ -695,9 +716,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const ptsDisplay = Number.isInteger(result.totalPoints) ? result.totalPoints : result.totalPoints.toFixed(1);
         const displayRate = result.effectiveRate.toFixed(2);
         
+        let presentHtml = '';
+        if (result.presentPoints > 0) {
+            presentHtml = `<div style="font-size: 0.85rem; color: #f59e0b; margin-top: 2px;">📱提示ボーナス: +${result.presentPoints}pt (${result.presentName})</div>`;
+        }
+        
         let recordBtnHtml = '';
         if (isOwned) {
-            const params = encodeURIComponent(JSON.stringify({ shopName, amount, cardName: result.name, points: result.totalPoints, unitName: result.unitName }));
+            const paramsObj = {
+                shopName, amount, cardName: result.name, points: result.totalPoints, unitName: result.unitName,
+                presentPoints: result.presentPoints, presentName: result.presentName
+            };
+            const params = encodeURIComponent(JSON.stringify(paramsObj));
             recordBtnHtml = `<button class="record-btn" onclick="window.openMemoModal('${params}')">この内容で記録する</button>`;
         }
 
@@ -708,6 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="card-info" style="flex:1">
                         <div class="card-name">${result.name}</div>
                         <div class="card-details">${result.label}</div>
+                        ${presentHtml}
                     </div>
                     <div class="card-stats" style="text-align: right;">
                         <div style="display:flex; justify-content: flex-end; gap: 8px; margin-bottom: 2px;">
@@ -727,7 +758,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openMemoModal = function(encodedParams) {
         pendingRecord = JSON.parse(decodeURIComponent(encodedParams));
         const pts = Number.isInteger(pendingRecord.points) ? pendingRecord.points : pendingRecord.points.toFixed(2);
-        modalSummary.textContent = `${pendingRecord.shopName} で ¥${pendingRecord.amount.toLocaleString()} 支払い (${pendingRecord.cardName} / ${pts}${pendingRecord.unitName})`;
+        
+        let summaryText = `${pendingRecord.shopName} で ¥${pendingRecord.amount.toLocaleString()} 支払い (${pendingRecord.cardName} / ${pts}${pendingRecord.unitName})`;
+        if (pendingRecord.presentPoints > 0) {
+            summaryText += ` + 提示 ${pendingRecord.presentPoints}pt (${pendingRecord.presentName})`;
+        }
+        
+        modalSummary.textContent = summaryText;
         memoInput.value = '';
         memoModal.classList.remove('hidden');
     };
@@ -750,6 +787,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cardName: pendingRecord.cardName,
             points: pendingRecord.points,
             unitName: pendingRecord.unitName,
+            presentPoints: pendingRecord.presentPoints,
+            presentName: pendingRecord.presentName,
             category: document.getElementById('record-category').value,
             memo: memoInput.value.trim()
         });

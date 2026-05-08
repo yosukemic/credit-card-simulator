@@ -61,6 +61,21 @@
                     </div>
                     
                     <div class="input-group">
+                        <label for="point-card">会計時に提示するポイントカード (任意)</label>
+                        <select id="point-card" name="point-card">
+                            <option value="none">提示なし</option>
+                            <option value="vpoint_05">Vポイントカード (0.5%還元)</option>
+                            <option value="vpoint_10">Vポイントカード (1.0%還元)</option>
+                            <option value="dpoint_05">dポイントカード (0.5%還元)</option>
+                            <option value="dpoint_10">dポイントカード (1.0%還元)</option>
+                            <option value="ponta_05">Pontaカード (0.5%還元)</option>
+                            <option value="ponta_10">Pontaカード (1.0%還元)</option>
+                            <option value="rakuten_05">楽天ポイントカード (0.5%還元)</option>
+                            <option value="rakuten_10">楽天ポイントカード (1.0%還元)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
                         <label for="amount">1回の決済金額 (円)</label>
                         <input type="number" id="amount" name="amount" min="1" placeholder="例: 500" required>
                     </div>
