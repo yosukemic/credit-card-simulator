@@ -460,8 +460,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const defaultRate = card.id === 'mufg' ? 19 : 7;
                     const cRate = (ownedObj && ownedObj.customRate) ? ownedObj.customRate : defaultRate;
                     extraInputsHtml = `
-                        <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#94a3b8; background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:6px; margin-top:0.5rem;">
-                            現在の対象店舗還元率: <input type="number" class="custom-rate-input" value="${cRate}" min="0" max="20" step="0.5" style="width:60px; padding:0.2rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white; margin-left:0.3rem;"> %
+                        <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#94a3b8; background:#f1f5f9; border:1px solid #e2e8f0; padding:0.5rem; border-radius:6px; margin-top:0.5rem;">
+                            現在の対象店舗還元率: <input type="number" class="custom-rate-input" value="${cRate}" min="0" max="20" step="0.5" style="width:60px; padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color); margin-left:0.3rem;"> %
                         </div>
                     `;
                 }
@@ -479,12 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const s3 = (ownedObj && ownedObj.eposShops && ownedObj.eposShops[2]) ? ownedObj.eposShops[2] : 'none';
                     
                     extraInputsHtml = `
-                        <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#94a3b8; background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:6px; margin-top:0.5rem;">
+                        <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#94a3b8; background:#f1f5f9; border:1px solid #e2e8f0; padding:0.5rem; border-radius:6px; margin-top:0.5rem;">
                             <div>選べるポイントアップショップ（3倍）</div>
                             <div style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.3rem;">
-                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">${shopOptionsHtml}</select>
-                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">${shopOptionsHtml}</select>
-                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">${shopOptionsHtml}</select>
+                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color);">${shopOptionsHtml}</select>
+                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color);">${shopOptionsHtml}</select>
+                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color);">${shopOptionsHtml}</select>
                             </div>
                         </div>
                     `;
