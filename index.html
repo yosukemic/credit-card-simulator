@@ -101,6 +101,47 @@
 
         <!-- View 3: Tracker (お小遣い帳) -->
         <section id="view-tracker" class="view-section hidden">
+            <!-- 総資産ダッシュボード -->
+            <div class="asset-dashboard glass-panel mb-4">
+                <div style="text-align:center; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px dashed var(--glass-border);">
+                    <div style="font-size:0.9rem; color:#94a3b8; margin-bottom:0.5rem;">💼 現在の総資産 (ネットワース)</div>
+                    <div id="total-net-worth" style="font-size:2.2rem; font-weight:800; color:#38bdf8; margin-bottom:1rem;">¥0</div>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.5rem; font-size:0.8rem; text-align:center; margin-bottom:1.2rem;">
+                        <div>
+                            <div style="color:#34d399; font-weight:bold;">💰 現金・電子マネー</div>
+                            <div id="total-cash-assets" style="font-size:1.1rem; font-weight:700; color:var(--text-color); margin-top:0.2rem;">¥0</div>
+                        </div>
+                        <div>
+                            <div style="color:#f87171; font-weight:bold;">💳 カード未払金</div>
+                            <div id="total-card-debt" style="font-size:1.1rem; font-weight:700; color:var(--text-color); margin-top:0.2rem;">-¥0</div>
+                            <button id="open-settle-modal-btn" class="settle-btn" style="margin-top:0.3rem; font-size:0.7rem; padding:0.2rem 0.5rem; border-radius:4px; background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.3); color:#f87171; cursor:pointer; font-weight:bold;">精算する</button>
+                        </div>
+                        <div>
+                            <div style="color:#fbbf24; font-weight:bold;">🎁 ポイント価値</div>
+                            <div id="total-point-value" style="font-size:1.1rem; font-weight:700; color:var(--text-color); margin-top:0.2rem;">+¥0</div>
+                            <div style="font-size:0.6rem; color:#94a3b8; margin-top:0.2rem;">(1pt=1円 / マイル=2円)</div>
+                        </div>
+                    <!-- 実質余裕資金 & 直近引き落とし予定 -->
+                    <div style="background:rgba(79,70,229,0.04); border:1px solid rgba(79,70,229,0.12); border-radius:12px; padding:1rem; margin-top:1rem; text-align:center;">
+                        <div style="font-size:0.8rem; color:var(--text-muted); font-weight:bold; margin-bottom:0.3rem;">💡 今自由に使える「実質余裕資金」</div>
+                        <div id="real-available-cash" style="font-size:1.8rem; font-weight:800; color:var(--accent-primary);">¥0</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.4rem; border-top:1px dashed rgba(79,70,229,0.12); padding-top:0.4rem; display:flex; justify-content:space-around;">
+                            <span>💰 所持現金: <strong id="cash-on-hand" style="color:var(--text-color);">¥0</strong></span>
+                            <span>💳 直近引き落とし予定: <strong id="next-payment-amount" style="color:#ef4444;">¥0</strong> (<span id="next-payment-date" style="font-weight:bold;">--/--</span>)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 今後の引き落としスケジュール -->
+                <div id="payment-schedule-container" class="hidden" style="margin-top:1rem; text-align:left;">
+                    <h4 style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.6rem; display:flex; align-items:center; gap:0.3rem; border-bottom:1px dashed var(--glass-border); padding-bottom:0.4rem;">📅 クレジットカード引き落とし予定</h4>
+                    <div id="payment-schedule-list" style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.8rem;">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+            </div>
+
             <div class="tracker-summary glass-panel mb-4">
                 <div class="summary-item">
                     <span class="summary-label">表示月の支出</span>
@@ -110,27 +151,39 @@
 
             <div class="asset-dashboard glass-panel mb-4">
                 <div style="text-align:center; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px dashed var(--glass-border);">
-                    <div style="font-size:0.9rem; color:#94a3b8; margin-bottom:0.5rem;">現在の総マイル換算力</div>
-                    <div style="display:flex; justify-content:center; gap:2rem;">
-                        <div>
-                            <div style="font-size:0.8rem; color:#60a5fa; font-weight:bold;">✈️ ANAマイル換算</div>
-                            <div id="total-ana-miles" style="font-size:1.8rem; font-weight:800; color:#f8fafc;">0</div>
+                    <div style="font-size:0.95rem; color:var(--text-muted); margin-bottom:1rem; font-weight:700; letter-spacing:0.05em;">✈️ 現在の総マイル換算力</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; max-width:480px; margin:0 auto;">
+                        <!-- ANAマイルカード -->
+                        <div style="background: rgba(30, 64, 175, 0.05); border: 1px solid rgba(30, 64, 175, 0.15); border-radius: 12px; padding: 0.8rem 1rem; text-align: center; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.03); transition: all 0.3s ease;">
+                            <div style="font-size:0.75rem; color:#1e40af; font-weight:700; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+                                <span style="font-size: 0.9rem;">💙</span> ANAマイル
+                            </div>
+                            <div style="margin-top: 0.4rem; display: flex; align-items: baseline; justify-content: center; gap: 0.15rem; color:#1d4ed8;">
+                                <span id="total-ana-miles" style="font-size:1.8rem; font-weight:900; letter-spacing: -0.02em; line-height: 1;">0</span>
+                                <span style="font-size:0.75rem; font-weight:700; opacity: 0.8;">マイル</span>
+                            </div>
                         </div>
-                        <div>
-                            <div style="font-size:0.8rem; color:#f87171; font-weight:bold;">✈️ JALマイル換算</div>
-                            <div id="total-jal-miles" style="font-size:1.8rem; font-weight:800; color:#f8fafc;">0</div>
+                        <!-- JALマイルカード -->
+                        <div style="background: rgba(190, 18, 60, 0.05); border: 1px solid rgba(190, 18, 60, 0.15); border-radius: 12px; padding: 0.8rem 1rem; text-align: center; box-shadow: 0 4px 12px rgba(190, 18, 60, 0.03); transition: all 0.3s ease;">
+                            <div style="font-size:0.75rem; color:#be123c; font-weight:700; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+                                <span style="font-size: 0.9rem;">❤️</span> JALマイル
+                            </div>
+                            <div style="margin-top: 0.4rem; display: flex; align-items: baseline; justify-content: center; gap: 0.15rem; color:#be123c;">
+                                <span id="total-jal-miles" style="font-size:1.8rem; font-weight:900; letter-spacing: -0.02em; line-height: 1;">0</span>
+                                <span style="font-size:0.75rem; font-weight:700; opacity: 0.8;">マイル</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="mile-goal-section" style="margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:1px dashed var(--glass-border);">
-                    <div style="font-size:0.9rem; color:#94a3b8; margin-bottom:0.8rem; text-align:center;">🎯 目標設定（エコノミー往復目安）</div>
+                    <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.8rem; text-align:center; font-weight:bold;">🎯 目標設定（エコノミー往復目安）</div>
                     <div style="display:flex; gap:0.5rem; justify-content:center; margin-bottom:1rem;">
-                        <select id="goal-airline" style="padding:0.4rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white; outline:none;">
+                        <select id="goal-airline" style="padding:0.4rem; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); outline:none; font-size:0.8rem; cursor:pointer;">
                             <option value="ana">ANA</option>
                             <option value="jal">JAL</option>
                         </select>
-                        <select id="goal-destination" style="padding:0.4rem; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white; outline:none;">
+                        <select id="goal-destination" style="padding:0.4rem; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); outline:none; font-size:0.8rem; cursor:pointer;">
                             <option value="none">目標を設定しない</option>
                             <option value="okinawa">沖縄 (約18,000マイル)</option>
                             <option value="seoul">ソウル (約15,000マイル)</option>
@@ -141,16 +194,16 @@
                     </div>
                     <div id="goal-progress-container" class="hidden">
                         <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.4rem;">
-                            <span id="goal-text" style="color:#cbd5e1;"></span>
-                            <span id="goal-remaining" style="color:#f8fafc; font-weight:bold;"></span>
+                            <span id="goal-text" style="color:var(--text-color); font-weight:600;"></span>
+                            <span id="goal-remaining" style="color:var(--accent-primary); font-weight:bold;"></span>
                         </div>
-                        <div style="width:100%; background:rgba(255,255,255,0.1); border-radius:10px; height:12px; overflow:hidden;">
-                            <div id="goal-progress-bar" style="height:100%; background:linear-gradient(90deg, #38bdf8, #818cf8); width:0%; transition:width 0.5s;"></div>
+                        <div style="width:100%; background:rgba(0,0,0,0.05); border-radius:10px; height:12px; overflow:hidden; border:1px solid rgba(0,0,0,0.02);">
+                            <div id="goal-progress-bar" style="height:100%; background:linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); width:0%; transition:width 0.5s;"></div>
                         </div>
                     </div>
                 </div>
-                </div>
-                <h3 style="margin-top:0; margin-bottom:1rem; font-size:1rem; color:#cbd5e1;">ポイント種類別 内訳</h3>
+                
+                <h3 style="margin-top:0; margin-bottom:1rem; font-size:1rem; color:var(--text-color); font-weight:700;">ポイント種類別 内訳</h3>
                 <div id="asset-list" class="asset-list">
                     <!-- Javascriptで生成 -->
                 </div>
@@ -240,6 +293,33 @@
             <div class="modal-actions">
                 <button id="manual-cancel-btn" class="record-btn" style="margin-top:0;">キャンセル</button>
                 <button id="manual-save-btn" class="submit-btn" style="flex:1;">保存する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Settle Modal -->
+    <div id="settle-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <h3>クレジットカードの未払金精算</h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem; text-align: center;">
+                カードで支払った未払金を現金から引き落とし（精算）します。
+            </p>
+            <div style="font-size:0.9rem; margin-bottom:1.5rem; background:rgba(0,0,0,0.3); padding:1rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#94a3b8;">💰 現在の所持現金</span>
+                <span id="settle-cash-balance" style="font-weight:bold; color:#34d399; font-size:1.1rem;">¥0</span>
+            </div>
+            <div class="input-group">
+                <label for="settle-card-select">精算するクレジットカード</label>
+                <select id="settle-card-select" style="background-color:rgba(15,23,42,0.8);">
+                    <!-- JavaScriptで未払金のあるカードを動的に生成 -->
+                </select>
+            </div>
+            <div id="settle-amount-info" style="font-size: 1.3rem; font-weight: 800; text-align: center; margin: 1.8rem 0; color: #f87171;">
+                引き落とし額: ¥0
+            </div>
+            <div class="modal-actions">
+                <button id="settle-cancel-btn" class="record-btn" style="margin-top:0;">キャンセル</button>
+                <button id="settle-execute-btn" class="submit-btn" style="flex:1; background:linear-gradient(135deg, #f87171, #ef4444); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);">精算を実行する</button>
             </div>
         </div>
     </div>

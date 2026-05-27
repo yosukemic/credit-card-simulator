@@ -46,6 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const goalRemaining = document.getElementById('goal-remaining');
     const goalProgressBar = document.getElementById('goal-progress-bar');
     
+    // Settle Modal Elements
+    const settleModal = document.getElementById('settle-modal');
+    const openSettleModalBtn = document.getElementById('open-settle-modal-btn');
+    const settleCardSelect = document.getElementById('settle-card-select');
+    const settleAmountInfo = document.getElementById('settle-amount-info');
+    const settleCancelBtn = document.getElementById('settle-cancel-btn');
+    const settleExecuteBtn = document.getElementById('settle-execute-btn');
+    const settleCashBalance = document.getElementById('settle-cash-balance');
+    
     const goalDestinations = {
         none: 0,
         okinawa: 18000,
@@ -78,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     let expenseHistory = JSON.parse(localStorage.getItem('sim_expense_history')) || [];
+    let scheduledPaymentDates = {};
     
     let currentCalDate = new Date();
     let selectedDateStr = null; // YYYY/MM/DD
@@ -365,6 +375,45 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'pizzahut', name: 'ピザハット', category: 'mufg_target', isOnline: false }
     ];
 
+    function getScheduledPaymentDate(recordDateStr, closingDay, paymentDay, paymentMonthOffset) {
+        // recordDateStr: "YYYY/MM/DD"
+        const [year, month, day] = recordDateStr.split('/').map(Number);
+        let closingYear = year;
+        let closingMonth = month;
+        
+        const isEndOfMonthClosing = closingDay >= 28;
+        let isAfterClosing = false;
+        
+        if (isEndOfMonthClosing) {
+            isAfterClosing = false; 
+        } else {
+            isAfterClosing = day > closingDay;
+        }
+        
+        if (isAfterClosing) {
+            closingMonth += 1;
+            if (closingMonth > 12) {
+                closingMonth = 1;
+                closingYear += 1;
+            }
+        }
+        
+        let paymentMonth = closingMonth + paymentMonthOffset;
+        let paymentYear = closingYear;
+        while (paymentMonth > 12) {
+            paymentMonth -= 12;
+            paymentYear += 1;
+        }
+        
+        let targetPaymentDay = paymentDay;
+        const lastDayOfPaymentMonth = new Date(paymentYear, paymentMonth, 0).getDate();
+        if (paymentDay >= 28 || paymentDay > lastDayOfPaymentMonth) {
+            targetPaymentDay = lastDayOfPaymentMonth;
+        }
+        
+        return `${paymentYear}/${String(paymentMonth).padStart(2, '0')}/${String(targetPaymentDay).padStart(2, '0')}`;
+    }
+
     function switchView(targetId) {
         views.forEach(v => v.classList.remove('active'));
         navBtns.forEach(b => b.classList.remove('active'));
@@ -414,7 +463,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (sel.value && sel.value !== 'none') eposShops.push(sel.value);
                 });
                 
-                ownedCards.push({ id, balance, customRate, eposShops });
+                let closingDay = 30; // デフォルト月末締め
+                let paymentDay = 27; // デフォルト27日払い
+                const closingSel = item.querySelector('.closing-day-select');
+                if (closingSel) closingDay = parseInt(closingSel.value);
+                const paymentSel = item.querySelector('.payment-day-select');
+                if (paymentSel) paymentDay = parseInt(paymentSel.value);
+                
+                ownedCards.push({ id, balance, customRate, eposShops, closingDay, paymentDay, paymentMonthOffset: 1 });
             });
             localStorage.setItem('sim_owned_cards', JSON.stringify(ownedCards));
             switchView('view-simulator');
@@ -490,6 +546,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
+                // クレジットカードの締め日・引き落とし日設定フォームの生成
+                let billingInputsHtml = '';
+                if (card.group !== '電子マネー・現金') {
+                    let defaultClosing = 15;
+                    let defaultPayment = 10;
+                    
+                    // デフォルトの推定マッピング
+                    if (['rakuten', 'rakuten_gold', 'rakuten_premium', 'paypay', 'paypay_gold', 'aupay', 'aupay_gold'].includes(card.id)) {
+                        defaultClosing = 30; // 月末締め
+                        defaultPayment = 27; // 27日払い
+                    } else if (['smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 'olive_normal', 'olive_gold', 'olive_platinum', 'dcard', 'dcard_gold', 'mufg', 'jcb_w', 'jcb_general', 'ana_card', 'ana_visa_gold', 'ana_student'].includes(card.id)) {
+                        defaultClosing = 15; // 15日締め
+                        defaultPayment = 10; // 10日払い
+                    } else {
+                        defaultClosing = 30; // その他は月末締め
+                        defaultPayment = 27; // 27日払いをデフォルトとする
+                    }
+                    
+                    const savedClosing = (ownedObj && ownedObj.closingDay !== undefined) ? ownedObj.closingDay : defaultClosing;
+                    const savedPayment = (ownedObj && ownedObj.paymentDay !== undefined) ? ownedObj.paymentDay : defaultPayment;
+                    
+                    billingInputsHtml = `
+                        <div class="card-billing-container mt-2" style="font-size:0.8rem; color:var(--text-muted); background:rgba(0,0,0,0.02); border:1px solid var(--glass-border); padding:0.6rem; border-radius:8px; margin-top:0.5rem; width:100%;">
+                            <div style="font-weight:bold; margin-bottom:0.4rem; color:var(--text-color);">📅 締め日・引き落とし日設定</div>
+                            <div style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.2rem;">
+                                <div>
+                                    締め日: 
+                                    <select class="closing-day-select">
+                                        <option value="10" ${savedClosing === 10 ? 'selected' : ''}>10日</option>
+                                        <option value="15" ${savedClosing === 15 ? 'selected' : ''}>15日</option>
+                                        <option value="20" ${savedClosing === 20 ? 'selected' : ''}>20日</option>
+                                        <option value="25" ${savedClosing === 25 ? 'selected' : ''}>25日</option>
+                                        <option value="30" ${savedClosing === 30 ? 'selected' : ''}>月末</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    引き落とし日: 
+                                    <select class="payment-day-select">
+                                        <option value="10" ${savedPayment === 10 ? 'selected' : ''}>翌月10日</option>
+                                        <option value="26" ${savedPayment === 26 ? 'selected' : ''}>翌月26日</option>
+                                        <option value="27" ${savedPayment === 27 ? 'selected' : ''}>翌月27日</option>
+                                        <option value="30" ${savedPayment === 30 ? 'selected' : ''}>翌月末</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 const html = `
                     <label class="check-item ${selectedClass}" data-id="${card.id}">
                         <div class="check-item-main">
@@ -500,6 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             現在残高: <input type="number" class="balance-input" value="${balance}" min="0"> ${card.unitName}
                         </div>
                         ${extraInputsHtml}
+                        ${billingInputsHtml}
                     </label>
                 `;
                 contentEl.insertAdjacentHTML('beforeend', html);
@@ -790,7 +896,8 @@ document.addEventListener('DOMContentLoaded', () => {
             presentPoints: pendingRecord.presentPoints,
             presentName: pendingRecord.presentName,
             category: document.getElementById('record-category').value,
-            memo: memoInput.value.trim()
+            memo: memoInput.value.trim(),
+            cleared: false
         });
         
         localStorage.setItem('sim_expense_history', JSON.stringify(expenseHistory));
@@ -843,6 +950,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = getFormattedDate(year, month + 1, day);
             const hasRecord = expenseHistory.some(r => r.date === dateStr);
+            const hasPayment = scheduledPaymentDates[dateStr] !== undefined;
             const isSelected = selectedDateStr === dateStr;
             
             const cell = document.createElement('div');
@@ -851,6 +959,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (hasRecord) {
                 cell.insertAdjacentHTML('beforeend', `<div class="cal-dot"></div>`);
+            }
+            
+            if (hasPayment) {
+                cell.className += ' has-payment';
+                cell.insertAdjacentHTML('beforeend', `<div class="cal-pay-dot" title="クレジットカード引き落とし予定"></div>`);
             }
 
             cell.addEventListener('click', () => {
@@ -913,7 +1026,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 points: totalPoints,
                 unitName: preset.unitName,
                 category: manualCategory.value,
-                memo: manualMemo.value.trim()
+                memo: manualMemo.value.trim(),
+                cleared: false
             });
             
             localStorage.setItem('sim_expense_history', JSON.stringify(expenseHistory));
@@ -928,58 +1042,241 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!assetList) return;
         assetList.innerHTML = '';
 
+        // 1. 各カード/電子マネー/現金のリアルタイム残高を計算する
+        const cashAndPrepaidBalances = {}; // { cardId: currentBalance }
+        const cardDebts = {}; // { cardId: unpaidAmount }
+        
+        ownedCards.forEach(oc => {
+            cashAndPrepaidBalances[oc.id] = oc.balance;
+            cardDebts[oc.id] = 0;
+        });
+
+        // 将来の引き落としスケジュールを集計するオブジェクト
+        const futurePayments = {}; // { payDateStr: { amount, cards: { cardName: amount } } }
+
+        expenseHistory.forEach(record => {
+            const preset = baseCardPresets.find(p => p.name === record.cardName);
+            if (preset) {
+                const isCleared = record.cleared === true;
+                
+                if (preset.id === 'cash') {
+                    if (cashAndPrepaidBalances['cash'] !== undefined) {
+                        cashAndPrepaidBalances['cash'] -= record.amount;
+                    } else {
+                        cashAndPrepaidBalances['cash'] = -record.amount;
+                    }
+                } else if (preset.group === '電子マネー・現金') {
+                    if (cashAndPrepaidBalances[preset.id] !== undefined) {
+                        cashAndPrepaidBalances[preset.id] -= record.amount;
+                    } else {
+                        cashAndPrepaidBalances[preset.id] = -record.amount;
+                    }
+                } else {
+                    // クレジットカードの場合
+                    if (!isCleared) {
+                        cardDebts[preset.id] = (cardDebts[preset.id] || 0) + record.amount;
+                        
+                        // クレジットカードの引き落とし日・締め日パラメータを取得
+                        const oc = ownedCards.find(c => c.id === preset.id);
+                        const closing = (oc && oc.closingDay !== undefined) ? oc.closingDay : 15;
+                        const payment = (oc && oc.paymentDay !== undefined) ? oc.paymentDay : 10;
+                        const offset = (oc && oc.paymentMonthOffset !== undefined) ? oc.paymentMonthOffset : 1;
+                        
+                        // 利用日から引き落とし予定日を計算
+                        const payDate = getScheduledPaymentDate(record.date, closing, payment, offset);
+                        
+                        if (!futurePayments[payDate]) {
+                            futurePayments[payDate] = { amount: 0, cards: {} };
+                        }
+                        futurePayments[payDate].amount += record.amount;
+                        futurePayments[payDate].cards[preset.name] = (futurePayments[payDate].cards[preset.name] || 0) + record.amount;
+                    }
+                }
+            }
+        });
+
+        // グローバルな状態を更新（カレンダー描画に引き継ぐため）
+        scheduledPaymentDates = futurePayments;
+
+        // 2. 「現金・電子マネー」の合計額を計算
+        let totalCashAssets = 0;
+        ownedCards.forEach(oc => {
+            const preset = baseCardPresets.find(p => p.id === oc.id);
+            if (preset && (preset.id === 'cash' || preset.group === '電子マネー・現金')) {
+                totalCashAssets += (cashAndPrepaidBalances[oc.id] || 0);
+            }
+        });
+
+        // 3. 「カード未払金」の合計額を計算
+        let totalCardDebt = 0;
+        Object.keys(cardDebts).forEach(id => {
+            totalCardDebt += cardDebts[id];
+        });
+
+        // 4. ポイント・マイルの集計と円換算価値の計算
         const pointTotals = {};
         
         ownedCards.forEach(oc => {
             const preset = baseCardPresets.find(p => p.id === oc.id);
-            if (preset && oc.balance > 0) {
-                if (!pointTotals[preset.pointType]) pointTotals[preset.pointType] = { amount: 0, anaRate: preset.anaRate, jalRate: preset.jalRate };
+            if (preset && oc.balance > 0 && preset.id !== 'cash') {
+                if (!pointTotals[preset.pointType]) {
+                    pointTotals[preset.pointType] = { amount: 0, anaRate: preset.anaRate, jalRate: preset.jalRate };
+                }
                 pointTotals[preset.pointType].amount += oc.balance;
-                pointTotals[preset.pointType].anaRate = Math.max(pointTotals[preset.pointType].anaRate, preset.anaRate);
-                pointTotals[preset.pointType].jalRate = Math.max(pointTotals[preset.pointType].jalRate, preset.jalRate);
             }
         });
 
         expenseHistory.forEach(record => {
             const preset = baseCardPresets.find(p => p.name === record.cardName);
-            if(preset) {
-                if (!pointTotals[preset.pointType]) pointTotals[preset.pointType] = { amount: 0, anaRate: preset.anaRate, jalRate: preset.jalRate };
-                
-                if (preset.pointType === 'なし') {
-                    // 現金（pointType === 'なし'）の場合は支出額を減算
-                    pointTotals[preset.pointType].amount -= record.amount;
-                } else if (record.points) {
-                    // その他のポイントは獲得ポイントを加算
+            if (preset && preset.id !== 'cash') {
+                if (!pointTotals[preset.pointType]) {
+                    pointTotals[preset.pointType] = { amount: 0, anaRate: preset.anaRate, jalRate: preset.jalRate };
+                }
+                if (record.points) {
                     pointTotals[preset.pointType].amount += record.points;
                 }
-                
-                pointTotals[preset.pointType].anaRate = Math.max(pointTotals[preset.pointType].anaRate, preset.anaRate);
-                pointTotals[preset.pointType].jalRate = Math.max(pointTotals[preset.pointType].jalRate, preset.jalRate);
             }
         });
 
+        let totalPointValueYen = 0;
         let totalAna = 0;
         let totalJal = 0;
 
-        const keys = Object.keys(pointTotals);
-        if (keys.length === 0) {
-            assetList.innerHTML = '<div class="empty-state">ポイント残高がありません。<br>所持カード画面で現在残高を入力するか、記録を追加してください。</div>';
-            return;
-        }
-
-        keys.sort((a,b) => pointTotals[b].amount - pointTotals[a].amount).forEach(type => {
+        Object.keys(pointTotals).forEach(type => {
+            if (type === 'なし') return; // 現金は除外
             const pt = pointTotals[type];
             totalAna += pt.amount * pt.anaRate;
             totalJal += pt.amount * pt.jalRate;
             
-            const val = Number.isInteger(pt.amount) ? pt.amount.toLocaleString() : pt.amount.toLocaleString(undefined, {minimumFractionDigits:1, maximumFractionDigits:1});
-            assetList.insertAdjacentHTML('beforeend', `
-                <div class="asset-item">
-                    <div class="asset-name">${type}</div>
-                    <div class="asset-value">${val}</div>
-                </div>
-            `);
+            let yenValue = 0;
+            if (type === 'ANAマイル' || type === 'JALマイル') {
+                yenValue = pt.amount * 2; // 1マイル = 2円換算
+            } else {
+                yenValue = pt.amount * 1; // 1ポイント = 1円換算
+            }
+            totalPointValueYen += yenValue;
         });
+
+        // 5. 総資産ダッシュボードUIの更新
+        const netWorthEl = document.getElementById('total-net-worth');
+        const cashAssetsEl = document.getElementById('total-cash-assets');
+        const cardDebtEl = document.getElementById('total-card-debt');
+        const pointValueEl = document.getElementById('total-point-value');
+
+        if (netWorthEl) netWorthEl.textContent = `¥${Math.floor(totalCashAssets - totalCardDebt + totalPointValueYen).toLocaleString()}`;
+        if (cashAssetsEl) cashAssetsEl.textContent = `¥${Math.floor(totalCashAssets).toLocaleString()}`;
+        if (cardDebtEl) cardDebtEl.textContent = `-¥${Math.floor(totalCardDebt).toLocaleString()}`;
+        if (pointValueEl) pointValueEl.textContent = `+¥${Math.floor(totalPointValueYen).toLocaleString()}`;
+
+        // 6. 実質余裕資金の計算と更新
+        const sortedPayDates = Object.keys(futurePayments).sort();
+        const nextPaymentAmount = sortedPayDates.length > 0 ? futurePayments[sortedPayDates[0]].amount : 0;
+        const nextPaymentDateStr = sortedPayDates.length > 0 ? sortedPayDates[0] : null;
+        
+        // リアルな手持ちの現金 (cashのみ) を計算
+        const cashAsset = ownedCards.find(c => c.id === 'cash');
+        const cashVal = cashAsset ? cashAsset.balance : 0;
+        let cashExpenses = 0;
+        expenseHistory.forEach(record => {
+            if (record.cardName === '現金') {
+                cashExpenses += record.amount;
+            }
+        });
+        const currentRealCash = cashVal - cashExpenses;
+
+        const realAvailableCashVal = currentRealCash - nextPaymentAmount;
+        
+        const realAvailableCashEl = document.getElementById('real-available-cash');
+        const cashOnHandEl = document.getElementById('cash-on-hand');
+        const nextPaymentAmountEl = document.getElementById('next-payment-amount');
+        const nextPaymentDateEl = document.getElementById('next-payment-date');
+        
+        if (realAvailableCashEl) realAvailableCashEl.textContent = `¥${Math.floor(realAvailableCashVal).toLocaleString()}`;
+        if (cashOnHandEl) cashOnHandEl.textContent = `¥${Math.floor(currentRealCash).toLocaleString()}`;
+        if (nextPaymentAmountEl) nextPaymentAmountEl.textContent = `¥${Math.floor(nextPaymentAmount).toLocaleString()}`;
+        if (nextPaymentDateEl) {
+            if (nextPaymentDateStr) {
+                const [,, payDay] = nextPaymentDateStr.split('/');
+                const nextPayMonth = nextPaymentDateStr.split('/')[1];
+                nextPaymentDateEl.textContent = `${nextPayMonth}/${payDay}払い`;
+            } else {
+                nextPaymentDateEl.textContent = '--/--';
+            }
+        }
+
+        // 7. 引き落とし予定スケジュールリストの描画
+        const schedContainer = document.getElementById('payment-schedule-container');
+        const schedList = document.getElementById('payment-schedule-list');
+        
+        if (schedContainer && schedList) {
+            if (sortedPayDates.length === 0) {
+                schedContainer.classList.add('hidden');
+            } else {
+                schedContainer.classList.remove('hidden');
+                schedList.innerHTML = '';
+                
+                sortedPayDates.forEach(dateStr => {
+                    const payInfo = futurePayments[dateStr];
+                    let cardDetailsText = '';
+                    Object.keys(payInfo.cards).forEach(cardName => {
+                        cardDetailsText += `${cardName}: ¥${payInfo.cards[cardName].toLocaleString()} / `;
+                    });
+                    cardDetailsText = cardDetailsText.slice(0, -3); // 末尾の " / " を削除
+                    
+                    schedList.insertAdjacentHTML('beforeend', `
+                        <div class="payment-schedule-item" style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.8rem; background:rgba(255, 255, 255, 0.45); border:1px solid rgba(0, 0, 0, 0.04); border-radius:8px;">
+                            <div>
+                                <div style="font-weight:bold; color:var(--text-color);">${dateStr} 引き落とし</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">${cardDetailsText}</div>
+                            </div>
+                            <div style="font-size:1rem; font-weight:800; color:#ef4444;">¥${payInfo.amount.toLocaleString()}</div>
+                        </div>
+                    `);
+                });
+            }
+        }
+
+        // 8. ポイント内訳リストの描画（現金以外のポイントを表示）
+        const keys = Object.keys(pointTotals).filter(type => type !== 'なし');
+        if (keys.length === 0) {
+            assetList.innerHTML = '<div class="empty-state">ポイント残高がありません。<br>所持カード画面で現在残高を入力するか、記録を追加してください。</div>';
+        } else {
+            keys.sort((a,b) => pointTotals[b].amount - pointTotals[a].amount).forEach(type => {
+                const pt = pointTotals[type];
+                const val = Number.isInteger(pt.amount) ? pt.amount.toLocaleString() : pt.amount.toLocaleString(undefined, {minimumFractionDigits:1, maximumFractionDigits:1});
+                
+                let valSuffix = 'pt';
+                if (type === 'JALマイル' || type === 'ANAマイル') valSuffix = 'マイル';
+                
+                let yenEquivalent = '';
+                if (type === 'JALマイル' || type === 'ANAマイル') {
+                    yenEquivalent = ` <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">(約¥${(pt.amount * 2).toLocaleString()})</span>`;
+                } else {
+                    yenEquivalent = ` <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">(¥${pt.amount.toLocaleString()})</span>`;
+                }
+
+                let borderLeftColor = 'var(--accent-secondary)';
+                let valueColor = 'var(--gold)';
+                if (type === 'ANAマイル') {
+                    borderLeftColor = '#1e40af';
+                    valueColor = '#1d4ed8';
+                } else if (type === 'JALマイル') {
+                    borderLeftColor = '#be123c';
+                    valueColor = '#be123c';
+                }
+
+                assetList.insertAdjacentHTML('beforeend', `
+                    <div class="asset-item" style="background: rgba(255, 255, 255, 0.45); border: 1px solid var(--glass-border); color: var(--text-color); display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1rem; border-radius: 8px; border-left: 4px solid ${borderLeftColor};">
+                        <div class="asset-name" style="font-weight: 600; display: flex; align-items: center; gap: 0.3rem;">
+                            ${type === 'ANAマイル' ? '💙 ' : type === 'JALマイル' ? '❤️ ' : ''}${type}
+                        </div>
+                        <div class="asset-value" style="color: ${valueColor}; font-weight: 800; font-size:1.1rem;">
+                            ${val} <span style="font-size:0.8rem; font-weight:600;">${valSuffix}</span>${yenEquivalent}
+                        </div>
+                    </div>
+                `);
+            });
+        }
         
         const anaEl = document.getElementById('total-ana-miles');
         const jalEl = document.getElementById('total-jal-miles');
@@ -1007,9 +1304,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const diff = requiredMiles - currentMiles;
                     goalRemaining.textContent = `あと ${Math.floor(diff).toLocaleString()} マイル`;
-                    goalRemaining.style.color = '#f8fafc';
+                    goalRemaining.style.color = '#cbd5e1';
                     goalProgressBar.style.width = `${Math.min((currentMiles / requiredMiles) * 100, 100)}%`;
-                    goalProgressBar.style.background = 'linear-gradient(90deg, #38bdf8, #818cf8)';
+                    goalProgressBar.style.background = 'linear-gradient(90deg, #4f46e5, #0284c7)';
                 }
             } else {
                 goalProgressContainer.classList.add('hidden');
@@ -1062,6 +1359,131 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             trackerList.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    // --- Credit Card Settlement Logic ---
+    function updateSettleAmount() {
+        if (!settleCardSelect || !settleAmountInfo) return;
+        const selectedOpt = settleCardSelect.options[settleCardSelect.selectedIndex];
+        if (selectedOpt) {
+            const amount = parseInt(selectedOpt.dataset.amount) || 0;
+            settleAmountInfo.textContent = `引き落とし額: ¥${amount.toLocaleString()}`;
+        } else {
+            settleAmountInfo.textContent = `引き落とし額: ¥0`;
+        }
+    }
+
+    if (settleCardSelect) {
+        settleCardSelect.addEventListener('change', updateSettleAmount);
+    }
+
+    if (openSettleModalBtn) {
+        openSettleModalBtn.addEventListener('click', () => {
+            // 現金残高を取得してリアルタイム手持ち現金残高を計算
+            const cashAsset = ownedCards.find(c => c.id === 'cash');
+            const cashVal = cashAsset ? cashAsset.balance : 0;
+            
+            let cashExpenses = 0;
+            expenseHistory.forEach(record => {
+                if (record.cardName === '現金') {
+                    cashExpenses += record.amount;
+                }
+            });
+            const currentRealCash = cashVal - cashExpenses;
+            
+            if (settleCashBalance) settleCashBalance.textContent = `¥${currentRealCash.toLocaleString()}`;
+            
+            // 未払金のあるクレジットカードの一覧をプルダウンに設定
+            settleCardSelect.innerHTML = '';
+            
+            const unpaidByCard = {};
+            expenseHistory.forEach(record => {
+                if (record.cleared !== true) {
+                    const preset = baseCardPresets.find(p => p.name === record.cardName);
+                    if (preset && preset.group !== '電子マネー・現金') {
+                        unpaidByCard[preset.id] = (unpaidByCard[preset.id] || 0) + record.amount;
+                    }
+                }
+            });
+            
+            const unpaidCardIds = Object.keys(unpaidByCard);
+            
+            if (unpaidCardIds.length === 0) {
+                alert('現在、精算が必要なクレジットカードの未払金はありません。');
+                return;
+            }
+            
+            unpaidCardIds.forEach(id => {
+                const preset = baseCardPresets.find(p => p.id === id);
+                if (preset) {
+                    settleCardSelect.insertAdjacentHTML('beforeend', `
+                        <option value="${id}" data-amount="${unpaidByCard[id]}">${preset.name} (未払: ¥${unpaidByCard[id].toLocaleString()})</option>
+                    `);
+                }
+            });
+            
+            updateSettleAmount();
+            settleModal.classList.remove('hidden');
+        });
+    }
+
+    if (settleCancelBtn) {
+        settleCancelBtn.addEventListener('click', () => {
+            settleModal.classList.add('hidden');
+        });
+    }
+
+    if (settleExecuteBtn) {
+        settleExecuteBtn.addEventListener('click', () => {
+            const selectedOpt = settleCardSelect.options[settleCardSelect.selectedIndex];
+            if (!selectedOpt) return;
+            
+            const cardId = settleCardSelect.value;
+            const settleAmount = parseInt(selectedOpt.dataset.amount) || 0;
+            
+            const cashAsset = ownedCards.find(c => c.id === 'cash');
+            if (!cashAsset) {
+                alert('所持カード設定で「現金」を登録してください。');
+                return;
+            }
+            
+            let cashExpenses = 0;
+            expenseHistory.forEach(record => {
+                if (record.cardName === '現金') {
+                    cashExpenses += record.amount;
+                }
+            });
+            const currentRealCash = cashAsset.balance - cashExpenses;
+
+            if (currentRealCash < settleAmount) {
+                if (!confirm('所持現金が未払金より少ないです。精算を実行しますか？（現金残高がマイナスになります）')) {
+                    return;
+                }
+            }
+            
+            // 1. クレジットカードの履歴レコードを精算済みにする
+            expenseHistory.forEach(record => {
+                const preset = baseCardPresets.find(p => p.name === record.cardName);
+                if (preset && preset.id === cardId && record.cleared !== true) {
+                    record.cleared = true;
+                }
+            });
+            
+            // 2. 現金残高から精算額を減算する
+            cashAsset.balance -= settleAmount;
+            
+            // 3. ローカルストレージを更新
+            localStorage.setItem('sim_owned_cards', JSON.stringify(ownedCards));
+            localStorage.setItem('sim_expense_history', JSON.stringify(expenseHistory));
+            
+            settleModal.classList.add('hidden');
+            alert('精算が完了しました！クレジットカードの未払金を引き落とし、現金を減算しました。');
+            
+            // 4. 再描画
+            renderAssetDashboard();
+            renderCalendar();
+            renderTracker();
         });
     }
 
