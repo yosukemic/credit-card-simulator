@@ -28,6 +28,12 @@
         <button class="nav-btn" data-target="view-tracker">
             <span>📓</span> 履歴
         </button>
+        <button class="nav-btn" data-target="view-stats">
+            <span>📊</span> 統計
+        </button>
+        <button class="nav-btn" data-target="view-routes">
+            <span>🗺️</span> 交換ルート
+        </button>
     </nav>
 
     <main class="container">
@@ -45,6 +51,58 @@
                 </div>
                 <button id="save-cards-btn" class="submit-btn mt-4">保存してシミュレータへ</button>
                 <button id="reset-data-btn" class="record-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.1); margin-top:1rem;">アプリのデータをすべてリセット</button>
+            </div>
+
+            <!-- 毎月の固定費・サブスク登録 -->
+            <div class="glass-panel mt-4">
+                <h2 class="section-title">毎月の固定費・サブスクの登録</h2>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.2rem; text-align:center;">
+                    毎月の家賃や光熱費、サブスク代を登録すると、履歴の引き落としスケジュールに自動で加算されます。
+                </p>
+                <form id="fixed-expense-form" style="display:flex; flex-direction:column; gap:0.8rem; margin-bottom:1.5rem;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                        <input type="text" id="fixed-name" placeholder="項目名 (例: Netflix, 電気代)" style="padding:0.6rem; border-radius:8px; border:1px solid #cbd5e1; font-size:0.9rem;" required>
+                        <input type="number" id="fixed-amount" placeholder="金額 (円)" style="padding:0.6rem; border-radius:8px; border:1px solid #cbd5e1; font-size:0.9rem;" required>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                        <select id="fixed-card" style="padding:0.6rem; border-radius:8px; border:1px solid #cbd5e1; font-size:0.9rem;" required>
+                            <!-- JSで動的に所持カードを生成 -->
+                        </select>
+                        <select id="fixed-day" style="padding:0.6rem; border-radius:8px; border:1px solid #cbd5e1; font-size:0.9rem;" required>
+                            <option value="5">毎月5日請求</option>
+                            <option value="10">毎月10日請求</option>
+                            <option value="15">毎月15日請求</option>
+                            <option value="20">毎月20日請求</option>
+                            <option value="25">毎月25日請求</option>
+                            <option value="27">毎月27日請求</option>
+                            <option value="30">毎月月末請求</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn" style="padding:0.6rem; font-size:0.95rem;">固定費を追加</button>
+                </form>
+
+                <div style="overflow-x:auto; margin-bottom:1.5rem;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left; color:var(--text-color);">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--glass-border); color:var(--text-muted);">
+                                <th style="padding:0.5rem;">項目</th>
+                                <th style="padding:0.5rem;">金額</th>
+                                <th style="padding:0.5rem;">支払手段</th>
+                                <th style="padding:0.5rem;">請求日</th>
+                                <th style="padding:0.5rem;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fixed-expense-list">
+                            <!-- JSで動的生成 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 一括集約シミュレーター -->
+                <div id="fixed-consolidation-box" class="hidden" style="padding:1rem; background:rgba(2, 132, 199, 0.05); border:1px solid rgba(2, 132, 199, 0.15); border-radius:12px; font-size:0.85rem; color:var(--text-color); transition:all 0.3s ease;">
+                    <div style="font-weight:bold; color:var(--accent-secondary); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.3rem;">💡 固定費一括集約シミュレーション</div>
+                    <div id="fixed-consolidation-text" style="line-height:1.5;"></div>
+                </div>
             </div>
         </section>
 
@@ -88,6 +146,12 @@
                 <h2 class="section-title">あなたの最適解</h2>
                 <div id="owned-ranking" class="ranking-list">
                     <!-- 所持カードのランキング -->
+                </div>
+                
+                <!-- 裏ワザ解説パネル -->
+                <div id="shortcut-tip-box" class="hidden" style="margin-top:1.5rem; padding:1.2rem; background:rgba(219, 39, 119, 0.05); border:1px solid rgba(219, 39, 119, 0.2); border-radius:16px; margin-bottom:1.5rem; animation:fadeIn 0.5s ease-out;">
+                    <div style="font-weight:bold; color:#db2777; font-size:0.95rem; margin-bottom:0.6rem; display:flex; align-items:center; gap:0.3rem;">💡 このお店のポイ活裏ワザ決済ルート</div>
+                    <div id="shortcut-tip-content" style="font-size:0.85rem; line-height:1.5; color:var(--text-color);"></div>
                 </div>
                 
                 <div id="suggest-section" class="suggest-section hidden mt-4">
@@ -228,6 +292,142 @@
             </div>
         </section>
 
+        <!-- View 4: Stats (統計) -->
+        <section id="view-stats" class="view-section hidden">
+            <div class="glass-panel mb-4">
+                <h2 class="section-title">📊 支出・獲得ポイント統計</h2>
+                <p style="font-size:0.85rem; color:var(--text-muted); text-align:center; margin-bottom:1.5rem;">記録された履歴から支出傾向とポイント獲得推移を分析します。</p>
+                
+                <div style="display:flex; justify-content:center; gap:1rem; margin-bottom:1.5rem;">
+                    <button id="stats-tab-category" class="submit-btn" style="padding:0.4rem 1rem; font-size:0.8rem; width:auto; border-radius:20px;">カテゴリ別</button>
+                    <button id="stats-tab-card" class="record-btn" style="padding:0.4rem 1rem; font-size:0.8rem; width:auto; border-radius:20px; margin-top:0;">決済カード別</button>
+                </div>
+
+                <!-- ドーナツグラフ表示領域 -->
+                <div style="position:relative; width:100%; max-width:320px; margin:0 auto 1.5rem auto; aspect-ratio:1; display:flex; align-items:center; justify-content:center;">
+                    <svg id="donut-chart-svg" width="100%" height="100%" viewBox="0 0 200 200" style="transform: rotate(-90deg); filter: drop-shadow(0 4px 10px rgba(0,0,0,0.05));"></svg>
+                    <!-- ドーナツの中央テキスト -->
+                    <div style="position:absolute; text-align:center; pointer-events:none;">
+                        <div id="donut-center-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">合計額</div>
+                        <div id="donut-center-val" style="font-size:1.2rem; font-weight:800; color:var(--text-color); margin-top:0.1rem;">¥0</div>
+                    </div>
+                </div>
+
+                <!-- 凡例リスト -->
+                <div id="stats-legend" style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; font-size:0.8rem; margin-bottom:1.5rem;">
+                    <!-- JSで動的生成 -->
+                </div>
+            </div>
+
+            <div class="glass-panel">
+                <h3 style="font-size:1.1rem; margin-bottom:1.2rem; font-weight:700; text-align:center;">📈 月別ポイント・マイル獲得推移</h3>
+                <div style="width:100%; height:180px; display:flex; align-items:flex-end; gap:0.8rem; padding-bottom:1rem; border-bottom:1px solid var(--glass-border); margin-bottom:0.5rem;" id="bar-chart-container">
+                    <!-- JSで動的に棒グラフを描画 -->
+                </div>
+                <div id="bar-chart-x-labels" style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); padding:0 0.5rem;">
+                    <!-- X軸ラベル -->
+                </div>
+            </div>
+        </section>
+
+        <!-- View 5: Routes (交換ルート) -->
+        <section id="view-routes" class="view-section hidden">
+            <div class="glass-panel mb-4">
+                <h2 class="section-title">🗺️ マイル最適交換ルート</h2>
+                <p style="font-size:0.85rem; color:var(--text-muted); text-align:center; margin-bottom:1.5rem;">お持ちのポイントを最も高い還元率でマイルへ交換するルートです。</p>
+                
+                <div style="background:rgba(255,255,255,0.45); border:1px solid var(--glass-border); padding:1rem; border-radius:12px; margin-bottom:1.5rem;">
+                    <div style="font-weight:bold; font-size:0.9rem; margin-bottom:0.8rem; color:var(--text-color); text-align:center;">🔄 ポイント残高入力・連動シミュレーション</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem;">
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:bold; display:block; margin-bottom:0.2rem;">Vポイント</label>
+                            <input type="number" id="route-input-vpoint" value="0" min="0" style="width:100%; padding:0.4rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; background:#fff;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:bold; display:block; margin-bottom:0.2rem;">エポスポイント</label>
+                            <input type="number" id="route-input-epos" value="0" min="0" style="width:100%; padding:0.4rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; background:#fff;">
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:bold; display:block; margin-bottom:0.2rem;">Pontaポイント</label>
+                            <input type="number" id="route-input-ponta" value="0" min="0" style="width:100%; padding:0.4rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; background:#fff;">
+                        </div>
+                        <button id="route-sync-btn" class="record-btn" style="padding:0.4rem; font-size:0.8rem; margin-top:1.1rem; height:fit-content; width:100%;">現在の所持カードから同期</button>
+                    </div>
+                </div>
+
+                <!-- ルート1: みずほルート -->
+                <div style="background:rgba(255,255,255,0.45); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem; margin-bottom:1.2rem; box-shadow: var(--glass-shadow);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--glass-border); padding-bottom:0.5rem; margin-bottom:1rem;">
+                        <span style="font-weight:bold; color:#1e40af; font-size:0.9rem;">💙 ANA みずほルート (70%還元)</span>
+                        <span id="route-result-mizuho" style="font-weight:900; color:#1d4ed8; font-size:1.1rem;">実質: 0 マイル</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; position:relative; padding-left:1.2rem;">
+                        <!-- ルートステップ -->
+                        <div class="route-step-node" style="position:relative;">
+                            <div style="font-weight:bold; font-size:0.8rem;">① Vポイント / 永久不滅ポイント</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">みずほマイレージクラブカード/ANA経由で交換</div>
+                            <div style="position:absolute; left:-1rem; top:0.2rem; width:8px; height:8px; border-radius:50%; background:#3b82f6;"></div>
+                        </div>
+                        <div style="width:1px; height:15px; background:#cbd5e1; margin-left:-0.8rem;"></div>
+                        <div class="route-step-node" style="position:relative;">
+                            <div style="font-weight:bold; font-size:0.8rem;">② JRキューポ</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">JQ CARDセゾンを保有しているとVポイントから等価交換可能</div>
+                            <div style="position:absolute; left:-1rem; top:0.2rem; width:8px; height:8px; border-radius:50%; background:#10b981;"></div>
+                        </div>
+                        <div style="width:1px; height:15px; background:#cbd5e1; margin-left:-0.8rem;"></div>
+                        <div class="route-step-node" style="position:relative;">
+                            <div style="font-weight:bold; font-size:0.8rem;">③ ANAマイル</div>
+                            <div style="font-size:0.7rem; color:#1e40af; font-weight:bold;">最終レート 70.0% で移行完了！</div>
+                            <div style="position:absolute; left:-1rem; top:0.2rem; width:8px; height:8px; border-radius:50%; background:#1e40af;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ルート2: エポスゴールド ➡️ ANAマイル (60%還元) -->
+                <div style="background:rgba(255,255,255,0.45); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem; margin-bottom:1.2rem; box-shadow: var(--glass-shadow);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--glass-border); padding-bottom:0.5rem; margin-bottom:1rem;">
+                        <span style="font-weight:bold; color:#1e40af; font-size:0.9rem;">💙 エポスゴールド ANAJQルート (60%還元)</span>
+                        <span id="route-result-epos-ana" style="font-weight:900; color:#1d4ed8; font-size:1.1rem;">実質: 0 マイル</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; position:relative; padding-left:1.2rem;">
+                        <div class="route-step-node" style="position:relative;">
+                            <div style="font-weight:bold; font-size:0.8rem;">① エポスポイント ➡️ JRキューポ</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">JQ CARD エポスを保有で等価交換可能</div>
+                            <div style="position:absolute; left:-1rem; top:0.2rem; width:8px; height:8px; border-radius:50%; background:#ec4899;"></div>
+                        </div>
+                        <div style="width:1px; height:15px; background:#cbd5e1; margin-left:-0.8rem;"></div>
+                        <div class="route-step-node" style="position:relative;">
+                            <div style="font-weight:bold; font-size:0.8rem;">② 永久不滅ポイント / みずほ経由 ➡️ ANAマイル</div>
+                            <div style="font-size:0.7rem; color:#1e40af; font-weight:bold;">最終レート 60.0% （JQみずほルート適用）</div>
+                            <div style="position:absolute; left:-1rem; top:0.2rem; width:8px; height:8px; border-radius:50%; background:#1e40af;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ルート3: Ponta / dポイント ➡️ JALマイル (50%還元) -->
+                <div style="background:rgba(255,255,255,0.45); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem; box-shadow: var(--glass-shadow);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--glass-border); padding-bottom:0.5rem; margin-bottom:1rem;">
+                        <span style="font-weight:bold; color:#be123c; font-size:0.9rem;">❤️ JALマイル ダイレクト交換 (50%還元)</span>
+                        <span id="route-result-jal" style="font-weight:900; color:#be123c; font-size:1.1rem;">実質: 0 マイル</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; position:relative; padding-left:1.2rem;">
+                        <div class="route-step-node" style="position:relative;">
+                            <div style="font-weight:bold; font-size:0.8rem;">① Pontaポイント / dポイント / エポスポイント</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">特別な中継カード不要で直接交換可能</div>
+                            <div style="position:absolute; left:-1rem; top:0.2rem; width:8px; height:8px; border-radius:50%; background:#f97316;"></div>
+                        </div>
+                        <div style="width:1px; height:15px; background:#cbd5e1; margin-left:-0.8rem;"></div>
+                        <div class="route-step-node" style="position:relative;">
+                            <div style="font-weight:bold; font-size:0.8rem;">② JALマイル</div>
+                            <div style="font-size:0.7rem; color:#be123c; font-weight:bold;">最終レート 50.0% で移行可能！（※キャンペーン時60%）</div>
+                            <div style="position:absolute; left:-1rem; top:0.2rem; width:8px; height:8px; border-radius:50%; background:#be123c;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Memo Modal -->

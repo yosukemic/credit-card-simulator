@@ -751,3 +751,65 @@ body {
     font-size: 0.75rem !important;
     cursor: pointer;
 }
+
+/* SVG charts & legend styles */
+.donut-segment {
+    transition: stroke-width 0.3s ease, filter 0.3s ease;
+    cursor: pointer;
+}
+.donut-segment:hover {
+    stroke-width: 24;
+    filter: brightness(1.05);
+}
+
+.chart-tooltip {
+    position: absolute;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: opacity 0.2s ease, transform 0.1s ease;
+    display: none;
+}
+
+.bar-chart-bar {
+    width: 28px;
+    background: linear-gradient(180deg, var(--accent-secondary), var(--accent-primary));
+    border-radius: 6px 6px 0 0;
+    transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s;
+    cursor: pointer;
+    position: relative;
+}
+.bar-chart-bar:hover {
+    filter: brightness(1.1);
+}
+
+.legend-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.4rem;
+}
+
+/* Fixed expenses table */
+#fixed-expense-list td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.03);
+}
+
+/* Point exchange route style */
+.route-step-node {
+    padding: 0.4rem 0 0.4rem 0.2rem;
+    transition: transform 0.2s ease;
+}
+.route-step-node:hover {
+    transform: translateX(4px);
+}
