@@ -171,7 +171,7 @@
                     <div style="font-size:0.9rem; color:#94a3b8; margin-bottom:0.5rem;">💼 現在の総資産 (ネットワース)</div>
                     <div id="total-net-worth" style="font-size:2.2rem; font-weight:800; color:#38bdf8; margin-bottom:1rem;">¥0</div>
                     
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.5rem; font-size:0.8rem; text-align:center; margin-bottom:1.2rem;">
+                    <div class="asset-split-grid">
                         <div>
                             <div style="color:#34d399; font-weight:bold;">💰 現金・電子マネー</div>
                             <div id="total-cash-assets" style="font-size:1.1rem; font-weight:700; color:var(--text-color); margin-top:0.2rem;">¥0</div>
@@ -186,16 +186,17 @@
                             <div id="total-point-value" style="font-size:1.1rem; font-weight:700; color:var(--text-color); margin-top:0.2rem;">+¥0</div>
                             <div style="font-size:0.6rem; color:#94a3b8; margin-top:0.2rem;">(1pt=1円 / マイル=2円)</div>
                         </div>
+                    </div>
+
                     <!-- 実質余裕資金 & 直近引き落とし予定 -->
                     <div style="background:rgba(79,70,229,0.04); border:1px solid rgba(79,70,229,0.12); border-radius:12px; padding:1rem; margin-top:1rem; text-align:center;">
                         <div style="font-size:0.8rem; color:var(--text-muted); font-weight:bold; margin-bottom:0.3rem;">💡 今自由に使える「実質余裕資金」</div>
                         <div id="real-available-cash" style="font-size:1.8rem; font-weight:800; color:var(--accent-primary);">¥0</div>
-                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.4rem; border-top:1px dashed rgba(79,70,229,0.12); padding-top:0.4rem; display:flex; justify-content:space-around;">
+                        <div class="real-cash-details">
                             <span>💰 所持現金: <strong id="cash-on-hand" style="color:var(--text-color);">¥0</strong></span>
                             <span>💳 直近引き落とし予定: <strong id="next-payment-amount" style="color:#ef4444;">¥0</strong> (<span id="next-payment-date" style="font-weight:bold;">--/--</span>)</span>
                         </div>
                     </div>
-                </div>
                 
                 <!-- 今後の引き落としスケジュール -->
                 <div id="payment-schedule-container" class="hidden" style="margin-top:1rem; text-align:left;">
@@ -205,6 +206,7 @@
                     </div>
                 </div>
             </div>
+        </div>
 
             <div class="tracker-summary glass-panel mb-4">
                 <div class="summary-item">

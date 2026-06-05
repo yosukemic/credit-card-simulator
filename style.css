@@ -464,10 +464,59 @@ body {
 .opacity-80 { opacity: 0.85; }
 
 /* Asset Dashboard */
+.asset-split-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin: 1.5rem 0;
+    text-align: center;
+}
+
+.asset-split-grid > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+.real-cash-details {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 0.8rem;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+}
+
 .asset-list {
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
+}
+
+@media (max-width: 480px) {
+    .asset-split-grid {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+        margin: 1rem 0;
+    }
+    
+    .asset-split-grid > div {
+        background: rgba(255, 255, 255, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        padding: 0.8rem 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+    
+    .real-cash-details {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: center;
+        text-align: center;
+    }
 }
 
 /* Tracker Summary */
